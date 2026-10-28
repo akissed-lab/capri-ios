@@ -155,7 +155,7 @@ struct ChatView: View {
 
     private var header: some View {
         HStack(spacing: 12) {
-            Avatar(size: 40, pulse: store.isThinking || speaker.isSpeaking)
+            CapriSpriteView(isActive: store.isThinking || speaker.isSpeaking, size: 40)
             VStack(alignment: .leading, spacing: 2) {
                 Text("Капри")
                     .font(.system(size: 17, weight: .semibold))
