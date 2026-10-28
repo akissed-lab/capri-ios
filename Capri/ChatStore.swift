@@ -13,9 +13,7 @@ final class ChatStore: ObservableObject {
     private var current: Task<Void, Never>?
     private var requestID = UUID()
 
-    init(memory: MemoryStore = MemoryStore(),
-         speaker: Speaker = Speaker(),
-         listener: Listener = Listener()) {
+    init(memory: MemoryStore, speaker: Speaker, listener: Listener) {
         self.memory = memory
         self.speaker = speaker
         self.listener = listener

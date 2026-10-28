@@ -16,8 +16,21 @@ struct CapriApp: App {
 }
 
 struct RootView: View {
-    @StateObject private var store = ChatStore()
+    @StateObject private var memory = MemoryStore()
+    @StateObject private var speaker = Speaker()
+    @StateObject private var listener = Listener()
+    @StateObject private var store: ChatStore
     @Environment(\.scenePhase) private var scenePhase
+
+    init() {
+        let memory = MemoryStore()
+        let speaker = Speaker()
+        let listener = Listener()
+        _memory = StateObject(wrappedValue: memory)
+        _speaker = StateObject(wrappedValue: speaker)
+        _listener = StateObject(wrappedValue: listener)
+        _store = StateObject(wrappedValue: ChatStore(memory: memory, speaker: speaker, listener: listener))
+    }
 
     var body: some View {
         ChatView(store: store, memory: store.memory)
