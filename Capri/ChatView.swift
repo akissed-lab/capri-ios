@@ -35,11 +35,13 @@ enum Haptics {
 }
 
 struct Background: View {
+    @ObservedObject private var theme = ThemeStore.shared
+
     var body: some View {
         LinearGradient(
             colors: [
-                Color(red: 0.04, green: 0.03, blue: 0.07),
-                Color(red: 0.09, green: 0.04, blue: 0.13)
+                Color(red: 0.03, green: 0.02, blue: 0.06),
+                Color(red: 0.07, green: 0.03, blue: 0.12)
             ],
             startPoint: .top,
             endPoint: .bottom
@@ -47,10 +49,19 @@ struct Background: View {
         .ignoresSafeArea()
         .overlay(
             RadialGradient(
-                colors: [Accent.pink.opacity(0.20), .clear],
+                colors: [theme.preset.glow.opacity(0.22), .clear],
                 center: .topTrailing,
-                startRadius: 8,
-                endRadius: 420
+                startRadius: 10,
+                endRadius: 460
+            )
+            .ignoresSafeArea()
+        )
+        .overlay(
+            RadialGradient(
+                colors: [theme.preset.glow.opacity(0.14), .clear],
+                center: .bottomLeading,
+                startRadius: 20,
+                endRadius: 380
             )
             .ignoresSafeArea()
         )
@@ -103,7 +114,7 @@ struct ChatView: View {
     @State private var showSettings = false
     @State private var showKeySetup = false
     @State private var showMusicSheet = false
-    @ObservedObject private var interactions = InteractionStore.shared
+    @ObservedObject private var theme = ThemeStore.shared
 
     var body: some View {
         ZStack {
@@ -112,20 +123,10 @@ struct ChatView: View {
                 header
                 Divider().overlay(Color.white.opacity(0.08))
                 messageList
-                LiveActionBar(onPet: {
-                    store.draft = "погладить капри"
-                    store.send()
-                }, onUpset: {
-                    store.draft = "обидеть капри"
-                    store.send()
-                }, onCheer: {
-                    store.draft = "порадовать капри"
-                    store.send()
-                }, onMusic: {
-                    showMusicSheet = true
-                })
                 inputBar
             }
+            FloatingCapriOverlay()
+                .environmentObject(store)
         }
         .preferredColorScheme(.dark)
         .sheet(isPresented: $showMusicSheet) {
@@ -135,11 +136,40 @@ struct ChatView: View {
             if let reaction = notification.object as? String {
                 store.missedYou()
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
-                    store.draft = ""
                     let mem = store.memory
                     mem.add(ChatMessage(role: .assistant, text: reaction))
                     store.speaker.speak(reaction)
+                    CapriLiveActivityManager.shared.update(status: "говорит...", message: reaction)
                 }
+            }
+        }
+        .onChange(of: store.isThinking) { _, thinking in
+            if thinking {
+                CapriLiveActivityManager.shared.start(status: "печатает...", message: "Капри набирает ответ...")
+            }
+        }
+        .onChange(of: store.messages.count) { _, _ in
+            if let last = store.messages.last, last.role == .assistant {
+                CapriLiveActivityManager.shared.update(status: speaker.isSpeaking ? "говорит..." : "онлайн", message: last.text)
+                DispatchQueue.main.asyncAfter(deadline: .now() + 8) {
+                    if !store.isThinking && !speaker.isSpeaking {
+                        CapriLiveActivityManager.shared.end()
+                    }
+                }
+            } else if let last = store.messages.last, last.role == .user {
+                CapriLiveActivityManager.shared.update(status: "печатает...", message: "Ты: \(last.text)")
+            }
+        }
+        .onChange(of: speaker.isSpeaking) { _, speaking in
+            if speaking, let last = store.messages.last, last.role == .assistant {
+                CapriLiveActivityManager.shared.update(status: "говорит...", message: last.text)
+            } else if !speaking {
+                CapriLiveActivityManager.shared.update(status: "онлайн", message: "Готова поболтать")
+            }
+        }
+        .onAppear {
+            if #available(iOS 16.1, *) {
+                CapriLiveActivityManager.shared.start(status: "онлайн", message: "Капри рядом")
             }
         }
         .alert("Микрофон", isPresented: micAlertBinding) {
@@ -192,20 +222,15 @@ struct ChatView: View {
                 }
             }
             Spacer()
-            Button {
-                speaker.stop()
-            } label: {
-                Image(systemName: speaker.isSpeaking ? "speaker.wave.2.fill" : "speaker.slash.fill")
-                    .font(.system(size: 16, weight: .medium))
-                    .foregroundStyle(.white.opacity(speaker.isSpeaking ? 0.9 : 0.5))
-            }
-            .padding(.trailing, 4)
+            Text("Жесты по модели")
+                .font(.system(size: 11))
+                .foregroundStyle(.white.opacity(0.4))
             Button {
                 showSettings = true
             } label: {
-                Image(systemName: "slider.horizontal.3")
+                Image(systemName: "paintbrush.pointed.fill")
                     .font(.system(size: 18, weight: .medium))
-                    .foregroundStyle(.white.opacity(0.8))
+                    .foregroundStyle(.white.opacity(0.9))
             }
         }
         .padding(.horizontal, 16)
@@ -278,7 +303,7 @@ struct ChatView: View {
                     .frame(width: 42, height: 42)
                     .background(
                         Circle()
-                            .fill(listener.isRecording ? AnyShapeStyle(Accent.gradient) : AnyShapeStyle(Color.white.opacity(0.08)))
+                            .fill(listener.isRecording ? AnyShapeStyle(theme.gradient) : AnyShapeStyle(Color.white.opacity(0.08)))
                     )
                     .scaleEffect(listener.isRecording ? 1.08 : 1.0)
                     .animation(.spring(response: 0.25, dampingFraction: 0.7), value: listener.isRecording)
@@ -305,7 +330,7 @@ struct ChatView: View {
                     .font(.system(size: 17, weight: .bold))
                     .foregroundStyle(.white)
                     .frame(width: 42, height: 42)
-                    .background(Circle().fill(Accent.gradient))
+                    .background(Circle().fill(theme.gradient))
             }
             .disabled(store.draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
             .opacity(store.draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? 0.45 : 1)
@@ -344,14 +369,14 @@ struct MessageBubble: View {
                 .background(
                     RoundedRectangle(cornerRadius: 18, style: .continuous)
                         .fill(message.role == .user
-                              ? AnyShapeStyle(Accent.gradient)
+                              ? AnyShapeStyle(theme.gradient)
                               : AnyShapeStyle(Color.white.opacity(0.08)))
                 )
                 .overlay(
                     RoundedRectangle(cornerRadius: 18, style: .continuous)
                         .strokeBorder(Color.white.opacity(message.role == .assistant ? 0.12 : 0.18), lineWidth: 1)
                 )
-                .shadow(color: message.role == .user ? Accent.pink.opacity(0.28) : Color.black.opacity(0.25), radius: 12, y: 6)
+                .shadow(color: message.role == .user ? theme.preset.glow.opacity(0.28) : Color.black.opacity(0.25), radius: 12, y: 6)
                 .contextMenu {
                     Button {
                         UIPasteboard.general.string = message.text

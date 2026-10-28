@@ -4,6 +4,7 @@ struct SettingsView: View {
     @ObservedObject var store: ChatStore
     @ObservedObject var memory: MemoryStore
     @ObservedObject private var notifier = Notifier.shared
+    @ObservedObject private var theme = ThemeStore.shared
 
     @Environment(\.dismiss) private var dismiss
 
@@ -38,20 +39,30 @@ struct SettingsView: View {
                 }
 
                 Section {
-                    Toggle("Озвучивать ответы", isOn: $tts)
-                    HStack {
-                        Image(systemName: "tortoise")
-                        Slider(value: $pitch, in: 0.9...1.6, step: 0.02)
-                        Image(systemName: "hare")
+                    Picker("Акцент интерфейса", selection: $theme.preset) {
+                        ForEach(AccentPreset.allCases) { preset in
+                            HStack {
+                                Circle()
+                                    .fill(LinearGradient(colors: preset.colors, startPoint: .topLeading, endPoint: .bottomTrailing))
+                                    .frame(width: 14, height: 14)
+                                Text(preset.title)
+                            }
+                            .tag(preset)
+                        }
                     }
-                    Button("Послушать голос") {
-                        Config.ttsOn = true
-                        store.speaker.speak("Привет. Это мой голос, привыкай.")
+                    HStack {
+                        Text("Превью")
+                        Spacer()
+                        Circle()
+                            .fill(theme.gradient)
+                            .frame(width: 28, height: 28)
+                            .overlay(Circle().stroke(Color.white.opacity(0.3), lineWidth: 1))
+                            .shadow(color: theme.preset.glow.opacity(0.5), radius: 10)
                     }
                 } header: {
-                    Text("Голос")
+                    Text("Внешний вид")
                 } footer: {
-                    Text("Ползунок выше — голос выше и звонче. Если в системе скачан улучшенный русский голос, Капри выберет его сама.")
+                    Text("Тёмная тема. Моделька Капри плавает по экрану — тащи пальцем, долгий тап откроет меню жестов.")
                 }
 
                 Section {
