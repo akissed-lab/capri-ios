@@ -130,7 +130,7 @@ struct ChatView: View {
         }
         .preferredColorScheme(.dark)
         .sheet(isPresented: $showMusicSheet) {
-            MusicReactionSheet(store: interactions)
+            MusicReactionSheet(store: InteractionStore.shared)
         }
         .onReceive(NotificationCenter.default.publisher(for: .capriMusicReaction)) { notification in
             if let reaction = notification.object as? String {
@@ -357,6 +357,7 @@ struct ChatView: View {
 
 struct MessageBubble: View {
     let message: ChatMessage
+    @ObservedObject private var theme = ThemeStore.shared
 
     var body: some View {
         HStack {
