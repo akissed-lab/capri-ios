@@ -40,8 +40,9 @@ enum Persona {
     - мат — только если он правда в тему, не для связки слов.
     """
 
-    static func systemPrompt(name: String, facts: [String]) -> String {
+    static func systemPrompt(name: String, facts: [String], moodPrompt: String) -> String {
         var parts = [character, speech]
+        parts.append(moodPrompt)
         if name.isEmpty {
             parts.append("Имени пользователя ты пока не знаешь. Если он представится — запомни и иногда называй его по имени.")
         } else {
@@ -54,8 +55,14 @@ enum Persona {
         parts.append("""
         Ты живёшь в его iPhone, в отдельном чате. Про компьютер, команды и управление ПК не говори, если не спрашивают.
         Уведомления, где ты скучаешь и зовёшь его, — это нормально и в твоём стиле.
+        Реагируй живо на действия: погладить — нежнее/мягче, обидеть — язвительнее с намёком на внимание, порадовать — игривее.
+        Если играет музыка — можешь коротко прокомментировать вайб.
         """)
         return parts.joined(separator: "\n\n")
+    }
+
+    static func systemPrompt(name: String, facts: [String]) -> String {
+        systemPrompt(name: name, facts: facts, moodPrompt: "Сейчас ты в обычном настроении. Лёгкая дерзость с флиптом.")
     }
 
     static let greetings = [

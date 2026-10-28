@@ -37,12 +37,27 @@ final class ChatStore: ObservableObject {
         memory.add(ChatMessage(role: .user, text: raw))
         memory.learn(raw)
 
+        // Живой отклик на действия
+        let lower = raw.lowercased()
+        if lower.contains("поглад") || lower.contains("гладь") || lower.contains("поглаж") {
+            appendAssistant(InteractionStore.shared.pet())
+            return
+        }
+        if lower.contains("обид") {
+            appendAssistant(InteractionStore.shared.upset())
+            return
+        }
+        if lower.contains("порад") || lower.contains("обрад") || lower.contains("умниц") || lower.contains("красив") || lower.contains("милая") {
+            appendAssistant(InteractionStore.shared.cheer())
+            return
+        }
+
         let identifier = UUID()
         requestID = identifier
         isThinking = true
         lastError = nil
 
-        let system = Persona.systemPrompt(name: memory.name, facts: memory.facts)
+        let system = Persona.systemPrompt(name: memory.name, facts: memory.facts, moodPrompt: InteractionStore.shared.moodPrompt())
         let history = memory.messages
         let client = GeminiClient()
 

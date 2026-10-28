@@ -102,6 +102,8 @@ struct ChatView: View {
 
     @State private var showSettings = false
     @State private var showKeySetup = false
+    @State private var showMusicSheet = false
+    @ObservedObject private var interactions = InteractionStore.shared
 
     var body: some View {
         ZStack {
@@ -110,15 +112,35 @@ struct ChatView: View {
                 header
                 Divider().overlay(Color.white.opacity(0.08))
                 messageList
+                LiveActionBar(onPet: {
+                    store.draft = "погладить капри"
+                    store.send()
+                }, onUpset: {
+                    store.draft = "обидеть капри"
+                    store.send()
+                }, onCheer: {
+                    store.draft = "порадовать капри"
+                    store.send()
+                }, onMusic: {
+                    showMusicSheet = true
+                })
                 inputBar
             }
         }
         .preferredColorScheme(.dark)
-        .sheet(isPresented: $showSettings) {
-            SettingsView(store: store, memory: memory)
+        .sheet(isPresented: $showMusicSheet) {
+            MusicReactionSheet(store: interactions)
         }
-        .fullScreenCover(isPresented: $showKeySetup) {
-            KeySetupView()
+        .onReceive(NotificationCenter.default.publisher(for: .capriMusicReaction)) { notification in
+            if let reaction = notification.object as? String {
+                store.missedYou()
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
+                    store.draft = ""
+                    let mem = store.memory
+                    mem.add(ChatMessage(role: .assistant, text: reaction))
+                    store.speaker.speak(reaction)
+                }
+            }
         }
         .alert("Микрофон", isPresented: micAlertBinding) {
             Button("Ок", role: .cancel) { listener.error = nil }
@@ -160,9 +182,14 @@ struct ChatView: View {
                 Text("Капри")
                     .font(.system(size: 17, weight: .semibold))
                     .foregroundStyle(.white)
-                Text(statusText)
-                    .font(.system(size: 12))
-                    .foregroundStyle(statusColor)
+                HStack(spacing: 6) {
+                    Circle()
+                        .fill(statusColor)
+                        .frame(width: 6, height: 6)
+                    Text(statusText + " • " + InteractionStore.shared.state.mood.title)
+                        .font(.system(size: 11))
+                        .foregroundStyle(.white.opacity(0.65))
+                }
             }
             Spacer()
             Button {
