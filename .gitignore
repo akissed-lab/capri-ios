@@ -1,0 +1,8 @@
+# XcodeGen собирает проект при каждом билде — в репозиторий его не кладём
+Capri.xcodeproj/
+build/
+DerivedData/
+*.xcuserstate
+xcuserdata/
+.DS_Store
+*.ipa
